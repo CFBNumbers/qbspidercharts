@@ -80,7 +80,8 @@ df <- pbp %>%
   select(year, qb, offense_play, sr_pct, epa_pct, 
          er_pct, ed_pct, ld_pct, pass_pct, rush_pct, sack_pct, to_pct)
 
-data <- read.csv("https://raw.githubusercontent.com/CFBNumbers/qbspidercharts/refs/heads/main/qbseasonspiderdata.csv")
+data <- read.csv("https://raw.githubusercontent.com/CFBNumbers/qbspidercharts/refs/heads/main/qbseasonspiderdata.csv") %>%
+filter(year != 2025) 
 
 # Combine and clean
 combined <- rbind(data, df)
