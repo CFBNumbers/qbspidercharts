@@ -189,6 +189,7 @@ ui <- fluidPage(
 server <- function(input, output) {
   observeEvent(input$generate, {
     output$plot <-  renderPlot({
+    data <- read.csv("https://raw.githubusercontent.com/CFBNumbers/qbspidercharts/refs/heads/main/qbseasonspiderdata.csv")
     qb_name <- input$qb_name
     tgt_year <- input$tgt_year
     df <- data %>%
