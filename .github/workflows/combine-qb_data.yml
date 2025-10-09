@@ -31,7 +31,7 @@ jobs:
 
     - name: Install R packages
       run: |
-        Rscript -e 'install.packages(c("tidyverse", "ggradar", "cfbfastR"), repos="https://cloud.r-project.org")'
+        Rscript -e 'install.packages(c("tidyverse", "dplyr", "cfbfastR"), repos="https://cloud.r-project.org")'
 
     - name: Combine QB Data
       run: |
