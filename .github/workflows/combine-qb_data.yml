@@ -16,6 +16,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      
+    - name: Install Linux dependencies for R packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcurl4-openssl-dev libfontconfig1-dev libfreetype6-dev
 
     - name: Install system dependencies for ragg
       run: |
