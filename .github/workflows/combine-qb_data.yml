@@ -10,22 +10,34 @@ jobs:
   update-csv:
     runs-on: ubuntu-latest
 
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/Rlib
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-  
+
     - name: Install system dependencies for ragg
       run: |
         sudo apt-get update
-        sudo apt-get install -y libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libwebp-dev libwebpmux-dev
-  
+        sudo apt-get install -y libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libwebp-dev libwebpmux-dev libjpeg-dev
+
     - name: Set up R
       uses: r-lib/actions/setup-r@v2
-  
-    - name: Install R packages
+
+    - name: Cache R packages
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.R_LIBS_USER }}
+        key: ${{ runner.os }}-R-${{ hashFiles('combine_qb_data.R') }}
+        restore-keys: |
+          ${{ runner.os }}-R-
+
+    - name: Install R packages (cached)
       run: |
-        Rscript -e 'install.packages(c("tidyverse", "cfbfastR"), repos = "https://cloud.r-project.org")'
-  
+        mkdir -p $R_LIBS_USER
+        Rscript -e 'install.packages(c("tidyverse", "cfbfastR"), lib = Sys.getenv("R_LIBS_USER"), repos = "https://cloud.r-project.org")'
+
     - name: Combine QB Data
       run: |
         Rscript combine_qb_data.R
