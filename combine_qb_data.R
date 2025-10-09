@@ -1,9 +1,5 @@
 library(tidyverse)
 library(dplyr)
-library(jsonlite)
-library(glue)
-library(devtools)
-library(rvest)
 library(cfbfastR)
 
 pbp <- load_cfb_pbp(2025:2025)
