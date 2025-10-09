@@ -24,15 +24,20 @@ jobs:
   
     - name: Install R packages
       run: |
-        install.packages(c("tidyverse", "dplyr", "cfbfastR"), repos = "https://cloud.r-project.org")
+        Rscript -e 'install.packages(c("tidyverse", "cfbfastR"), repos = "https://cloud.r-project.org")'
+  
     - name: Combine QB Data
       run: |
         Rscript combine_qb_data.R
 
     - name: Commit and push updated CSV
       run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add qbseasonspiderdata.csv
-        git commit -m "Update qbseasonspiderdata.csv via GitHub Action" || echo "No changes to commit"
-        git push
+        if [ -f qbseasonspiderdata.csv ]; then
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add qbseasonspiderdata.csv
+          git commit -m "Update qbseasonspiderdata.csv via GitHub Action" || echo "No changes to commit"
+          git push
+        else
+          echo "qbseasonspiderdata.csv not found, skipping commit."
+        fi
