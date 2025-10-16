@@ -16,7 +16,7 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
     - name: Install Linux dependencies for R packages
       run: |
         sudo apt-get update
@@ -42,10 +42,15 @@ jobs:
       run: |
         mkdir -p $R_LIBS_USER
         Rscript -e 'install.packages(c("tidyverse", "cfbfastR"), lib = Sys.getenv("R_LIBS_USER"), repos = "https://cloud.r-project.org")'
+        Rscript -e '.libPaths(Sys.getenv("R_LIBS_USER")); print(.libPaths())'
+
+    - name: Check installed R packages
+      run: |
+        Rscript -e '.libPaths(Sys.getenv("R_LIBS_USER")); installed.packages()[,c("Package", "LibPath")]'
 
     - name: Combine QB Data
       run: |
-        Rscript combine_qb_data.R
+        Rscript -e '.libPaths(Sys.getenv("R_LIBS_USER")); source("combine_qb_data.R")'
 
     - name: Commit and push updated CSV
       run: |
