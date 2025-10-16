@@ -1,3 +1,7 @@
+
+.libPaths(Sys.getenv("R_LIBS_USER"))
+
+
 library(tidyverse)
 library(dplyr)
 library(cfbfastR)
