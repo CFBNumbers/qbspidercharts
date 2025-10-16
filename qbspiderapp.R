@@ -25,14 +25,13 @@ library(thematic)
 library(renv)
 thematic::thematic_shiny(font = "auto")
 options(warn = -1)
-# Read the data
+
 data <- read.csv("https://raw.githubusercontent.com/CFBNumbers/qbspidercharts/refs/heads/main/qbseasonspiderdata.csv")
 cfblogos <- read.csv("https://raw.githubusercontent.com/CFBNumbers/logos/main/cfblogos.csv")
 x <- read.csv("https://github.com/CFBNumbers/qbspidercharts/blob/main/fbsteams.csv")
 compdata <- read.csv("https://raw.githubusercontent.com/CFBNumbers/qbspidercharts/refs/heads/main/spidercompdata.csv")
 
 
-# Define UI
 options(shiny.usecairo=F)
 
 ui <- fluidPage(
@@ -185,7 +184,6 @@ ui <- fluidPage(
 
 
 
-# Define server logic
 server <- function(input, output) {
   observeEvent(input$generate, {
     output$plot <-  renderPlot({
@@ -396,7 +394,6 @@ server <- function(input, output) {
 }
 
 
-# Run the application 
 shinyApp(ui = ui, server = server)
 
 
