@@ -5,24 +5,17 @@ on:
     # 9 AM Eastern:
     # 13:00 UTC during EDT
     # 14:00 UTC during EST
-    #
-    # Run at both possible UTC times.
-    # The Eastern-time check below determines which one
-    # actually runs the R script.
     - cron: "0 13 * * 1,3"
     - cron: "0 14 * * 1,3"
 
-  # Allows manual testing from the Actions tab
+  # Allows manual testing
   workflow_dispatch:
 
 permissions:
   contents: write
 
-
 jobs:
-
   update-data:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -43,29 +36,22 @@ jobs:
         id: eastern-time
         shell: bash
         run: |
-
           CURRENT_HOUR=$(TZ="America/New_York" date +%H)
 
           echo "Current Eastern hour: $CURRENT_HOUR"
 
-          # Manual runs always proceed
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-
             echo "Manual run detected."
             echo "run_update=true" >> "$GITHUB_OUTPUT"
 
-          # Scheduled runs only proceed at 9 AM Eastern
           elif [ "$CURRENT_HOUR" = "09" ]; then
-
             echo "It is 9 AM Eastern."
             echo "run_update=true" >> "$GITHUB_OUTPUT"
 
           else
-
             echo "Not 9 AM Eastern."
             echo "Skipping update."
             echo "run_update=false" >> "$GITHUB_OUTPUT"
-
           fi
 
 
@@ -81,7 +67,7 @@ jobs:
 
 
       # ------------------------------------------------------
-      # INSTALL CRAN/RSPM PACKAGES
+      # INSTALL R DEPENDENCIES
       # ------------------------------------------------------
 
       - name: Set up R dependencies
@@ -96,13 +82,13 @@ jobs:
 
 
       # ------------------------------------------------------
-      # INSTALL espnscrapeR FROM R-UNIVERSE
+      # VERIFY PACKAGES
       # ------------------------------------------------------
 
-      - name: Install espnscrapeR
+      - name: Verify R packages
         if: steps.eastern-time.outputs.run_update == 'true'
         run: |
-          Rscript -e 'install.packages("espnscrapeR", repos = c("https://nflverse.r-universe.dev", "https://cloud.r-project.org"))'
+          Rscript -e 'library(dplyr); library(stringr); library(stringi); library(cfbfastR); cat("All R packages loaded successfully.\n")'
 
 
       # ------------------------------------------------------
@@ -114,9 +100,7 @@ jobs:
         env:
           CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
         run: |
-
           echo "Running combine_qb_data.R..."
-
           Rscript combine_qb_data.R
 
 
@@ -127,9 +111,7 @@ jobs:
       - name: Show changed files
         if: steps.eastern-time.outputs.run_update == 'true'
         run: |
-
           echo "Files changed by R script:"
-
           git status --short
 
 
@@ -140,30 +122,19 @@ jobs:
       - name: Commit updated data
         if: steps.eastern-time.outputs.run_update == 'true'
         run: |
-
           git config --local user.name "github-actions[bot]"
-
           git config --local user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Only stage the three generated data files
           git add qbseasonspiderdata.csv
           git add spidercompdata.csv
           git add griddata.csv
 
-
-          # Check whether the generated files actually changed
           if git diff --cached --quiet; then
-
             echo "No data changes detected."
             echo "Nothing to commit."
-
           else
-
             echo "Data changes detected."
-
             git commit -m "Update QB data"
-
             git push
-
           fi
