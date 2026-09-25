@@ -2,26 +2,27 @@ name: Update QB Data
 
 on:
   schedule:
-    # GitHub cron schedules are UTC.
+    # 9 AM Eastern:
+    # 13:00 UTC during EDT
+    # 14:00 UTC during EST
     #
-    # 9 AM Eastern is:
-    #   13:00 UTC during EDT
-    #   14:00 UTC during EST
-    #
-    # Trigger at both possible times. The timezone check below
-    # ensures the update only runs when it is actually 9 AM
-    # in America/New_York.
+    # Run at both possible UTC times.
+    # The Eastern-time check below determines which one
+    # actually runs the R script.
     - cron: "0 13 * * 1,3"
     - cron: "0 14 * * 1,3"
 
-  # Allows manual runs from the GitHub Actions tab
+  # Allows manual testing from the Actions tab
   workflow_dispatch:
 
 permissions:
   contents: write
 
+
 jobs:
+
   update-data:
+
     runs-on: ubuntu-latest
 
     steps:
@@ -35,27 +36,36 @@ jobs:
 
 
       # ------------------------------------------------------
-      # DETERMINE WHETHER IT IS 9 AM EASTERN
+      # CHECK EASTERN TIME
       # ------------------------------------------------------
 
       - name: Check Eastern time
         id: eastern-time
         shell: bash
         run: |
+
           CURRENT_HOUR=$(TZ="America/New_York" date +%H)
 
           echo "Current Eastern hour: $CURRENT_HOUR"
 
-          # Always allow manually triggered workflows
+          # Manual runs always proceed
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+
+            echo "Manual run detected."
             echo "run_update=true" >> "$GITHUB_OUTPUT"
 
-          # Scheduled workflow only proceeds at 9 AM Eastern
+          # Scheduled runs only proceed at 9 AM Eastern
           elif [ "$CURRENT_HOUR" = "09" ]; then
+
+            echo "It is 9 AM Eastern."
             echo "run_update=true" >> "$GITHUB_OUTPUT"
 
           else
+
+            echo "Not 9 AM Eastern."
+            echo "Skipping update."
             echo "run_update=false" >> "$GITHUB_OUTPUT"
+
           fi
 
 
@@ -71,7 +81,7 @@ jobs:
 
 
       # ------------------------------------------------------
-      # INSTALL R DEPENDENCIES
+      # INSTALL CRAN/RSPM PACKAGES
       # ------------------------------------------------------
 
       - name: Set up R dependencies
@@ -83,21 +93,20 @@ jobs:
             any::stringr
             any::stringi
             any::cfbfastR
-            any::remotes
 
 
       # ------------------------------------------------------
-      # INSTALL espnscrapeR
+      # INSTALL espnscrapeR FROM R-UNIVERSE
       # ------------------------------------------------------
 
       - name: Install espnscrapeR
         if: steps.eastern-time.outputs.run_update == 'true'
         run: |
-          Rscript -e 'if (!requireNamespace("espnscrapeR", quietly = TRUE)) remotes::install_github("jthomasmock/espnscrapeR")'
+          Rscript -e 'install.packages("espnscrapeR", repos = c("https://nflverse.r-universe.dev", "https://cloud.r-project.org"))'
 
 
       # ------------------------------------------------------
-      # RUN DATA UPDATE
+      # RUN R SCRIPT
       # ------------------------------------------------------
 
       - name: Run QB data update
@@ -105,6 +114,9 @@ jobs:
         env:
           CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
         run: |
+
+          echo "Running combine_qb_data.R..."
+
           Rscript combine_qb_data.R
 
 
@@ -115,11 +127,14 @@ jobs:
       - name: Show changed files
         if: steps.eastern-time.outputs.run_update == 'true'
         run: |
+
+          echo "Files changed by R script:"
+
           git status --short
 
 
       # ------------------------------------------------------
-      # COMMIT UPDATED CSV FILES
+      # COMMIT AND PUSH UPDATED DATA
       # ------------------------------------------------------
 
       - name: Commit updated data
@@ -131,16 +146,21 @@ jobs:
           git config --local user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # Only stage the three generated data files
           git add qbseasonspiderdata.csv
           git add spidercompdata.csv
           git add griddata.csv
 
+
+          # Check whether the generated files actually changed
           if git diff --cached --quiet; then
 
             echo "No data changes detected."
             echo "Nothing to commit."
 
           else
+
+            echo "Data changes detected."
 
             git commit -m "Update QB data"
 
