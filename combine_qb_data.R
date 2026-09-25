@@ -7,7 +7,6 @@ library(dplyr)
 library(stringr)
 library(stringi)
 library(cfbfastR)
-library(espnscrapeR)
 
 # CFBD_API_KEY is supplied by GitHub Actions through:
 # env:
