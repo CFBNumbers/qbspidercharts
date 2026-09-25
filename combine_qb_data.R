@@ -26,8 +26,9 @@ library(apcluster)
 library(geomtextpath)
 library(cfb4th)
 library(lme4)
-
 library(stringr)
+Sys.setenv(CFBD_API_KEY = "JPnkMqBIdRbAYVyM8y24N4hsY6IdXno2pwl2hCNZ98smfwFvGU5sRTrGFFDC7fQZ")
+setwd("~/Desktop")
 
 standardize_qb <- function(qb) {
   s <- qb
@@ -119,9 +120,8 @@ df <- pbp %>%
          exp = ifelse(EPA >= 0.8, 1, 0),
          success = ifelse(EPA > 0, 1, 0)) %>%
   filter(!is.na(qb), !is.na(EPA)) %>%
-  group_by(qb) %>%
-  summarise(offense_play = last(offense_play), 
-            passes = sum(pass_attempt),
+  group_by(qb, offense_play) %>%
+  summarise(passes = sum(pass_attempt),
             ed_epa = mean(EPA[down <= 2]),
             ld_epa = mean(EPA[down >= 3]),
             pass_epa = sum(EPA[pass == 1]),
@@ -134,6 +134,7 @@ df <- pbp %>%
   filter(passes >= 30) %>%
   left_join(x, by = c("offense_play" = "name")) %>%
   filter(!is.na(want)) %>%
+  ungroup() %>%
   mutate(qbs = n(),
          ed_pct = (1-(rank(-ed_epa)/qbs))*100,
          ld_pct = (1-(rank(-ld_epa)/qbs))*100,
@@ -169,5 +170,124 @@ combined <- combined %>%
 
 # Write result to repo file
 write.csv(combined, "qbseasonspiderdata.csv", row.names = FALSE)
+
+#Comparison Data
+
+old <- read.csv("https://raw.githubusercontent.com/CFBNumbers/qbspidercharts/refs/heads/main/rawcompdata.csv")
+df <- pbp %>%
+  mutate(
+    qb = case_when(
+      !is.na(passer_player_name) ~ passer_player_name,
+      !is.na(rusher_player_name) ~ rusher_player_name,
+      TRUE ~ str_match(
+        play_text,
+        "#\\d+\\s+([A-Za-z]+\\.[A-Za-z]+)"
+      )[, 2]
+    ),
+    
+    qb = standardize_qb(qb)
+  ) %>%
+  mutate(qb = ifelse(qb == "DJ Uiagalelei", "D.J. Uiagalelei", qb),
+         qb = ifelse(qb == "D. Uiagalelei", "D.J. Uiagalelei", qb),
+         qb = ifelse(qb == "Joe Milton III", "Joe Milton", qb),
+         qb = ifelse(qb == "Alonza Barnett III", "Alonza Barnett", qb),
+         qb = ifelse(qb == "Alonza Barnett Iii", "Alonza Barnett", qb),
+         qb = ifelse(qb == "Ta'Quan Roberson", "Ta’Quan Roberson", qb),
+         qb = ifelse(qb == "Thomas Castellanos", "Tommy Castellanos", qb),
+         exp = ifelse(EPA >= 0.8, 1, 0),
+         success = ifelse(EPA > 0, 1, 0)) %>%
+  filter(!is.na(qb), !is.na(EPA)) %>%
+  group_by(year, qb, offense_play) %>%
+  summarise(passes = sum(pass_attempt),
+            ed_epa = mean(EPA[down <= 2]),
+            ld_epa = mean(EPA[down >= 3]),
+            pass_epa = sum(EPA[pass == 1]),
+            rush_epa = sum(EPA[rush == 1]),
+            sr = mean(success),
+            er = mean(exp),
+            sack_rate = mean(sack[pass == 1]),
+            epa_to = sum(EPA[turnover == 1 & downs_turnover == 0]),
+            epa_play = mean(EPA)) %>%
+  filter(passes >= 100) %>%
+  left_join(x, by = c("offense_play" = "name")) %>%
+  filter(!is.na(want)) %>%
+  ungroup() 
+
+comp_data <- rbind(old, df)
+
+comp_data <- comp_data %>%
+  ungroup() %>%
+  mutate(qbs = n(),
+         ed_pct = (1-(rank(-ed_epa)/qbs))*100,
+         ld_pct = (1-(rank(-ld_epa)/qbs))*100,
+         sr_pct = (1-(rank(-sr)/qbs))*100,
+         er_pct = (1-(rank(-er)/qbs))*100,
+         sack_pct = (1-(rank(sack_rate)/qbs))*100,
+         to_pct = (1-(rank(-epa_to)/qbs))*100,
+         epa_pct = (1-(rank(-epa_play)/qbs))*100,
+         pass_pct = (1-(rank(-pass_epa)/qbs))*100,
+         rush_pct = (1-(rank(-rush_epa)/qbs))*100) %>%
+  ungroup() %>%
+  select(year, qb, offense_play, sr_pct, epa_pct, 
+         er_pct, ed_pct, ld_pct, pass_pct, rush_pct, sack_pct, to_pct)
+
+write.table(comp_data, "spidercompdata.csv", sep = ",")
+
+
+pbp <- load_espn_cfb_pbp(2026)
+
+fbs <- cfbd_team_info(only_fbs = TRUE)
+
+fbs <- fbs %>%
+  select(school, team_id) %>%
+  mutate(school = ifelse(school == "App State", "Appalachian State", school),
+         school = ifelse(school == "Massachusetts", "UMass", school),
+         school = ifelse(school == "Sam Houston", "Sam Houston State", school),
+         school = ifelse(school == "Southern Miss", "Southern Mississippi", school),
+         school = ifelse(school == "UL Monroe", "Louisiana Monroe", school),
+         school = ifelse(school == "UConn", "Connecticut", school),
+         school = ifelse(school == "UTSA", "UT San Antonio", school)) %>%
+  mutate(school = stringi::stri_trans_general(school, "Latin-ASCII"))
+
+
+df <- pbp %>%
+  mutate(qb = ifelse(is.na(passer_player_name), rusher_player_name, passer_player_name)) %>%
+  mutate(qb = ifelse(qb == "DJ Uiagalelei", "D.J. Uiagalelei", qb),
+         qb = ifelse(qb == "D. Uiagalelei", "D.J. Uiagalelei", qb),
+         qb = ifelse(qb == "Joe Milton III", "Joe Milton", qb),
+         qb = ifelse(qb == "Alonza Barnett III", "Alonza Barnett", qb),
+         qb = ifelse(qb == "Alonza Barnett Iii", "Alonza Barnett", qb),
+         qb = ifelse(qb == "Ta'Quan Roberson", "Ta’Quan Roberson", qb),
+         qb = ifelse(qb == "Thomas Castellanos", "Tommy Castellanos", qb),
+         exp = ifelse(EPA >= 0.8, 1, 0),
+         success = ifelse(EPA > 0, 1, 0)) %>%
+  filter(!is.na(air_yards), !is.na(cpoe), !is.na(EPA), pass_attempt == 1) %>%
+  select(qb, pos_team_id, air_yards, cpoe, pass_direction, EPA) %>%
+  left_join(fbs, by = c("pos_team_id" = "team_id")) %>%
+  mutate(bin = case_when(
+    air_yards <= 0 & pass_direction == "left" ~ "BL", 
+    air_yards <= 0 & pass_direction == "middle" ~ "BC", 
+    air_yards <= 0 & pass_direction == "right" ~ "BR", 
+    air_yards > 0 & air_yards <= 9 & pass_direction == "left" ~ "SL", 
+    air_yards > 0 & air_yards <= 9 & pass_direction == "middle" ~ "SC", 
+    air_yards > 0 & air_yards <= 9 & pass_direction == "right" ~ "SR",
+    air_yards > 9 & air_yards <= 19 & pass_direction == "left" ~ "ML", 
+    air_yards > 9 & air_yards <= 19 & pass_direction == "middle" ~ "MC", 
+    air_yards > 9 & air_yards <= 19 & pass_direction == "right" ~ "MR",
+    air_yards > 19 & pass_direction == "left" ~ "DL", 
+    air_yards > 19 & pass_direction == "middle" ~ "DC", 
+    air_yards > 19 & pass_direction == "right" ~ "DR",
+    TRUE ~ NA)) %>%
+  group_by(qb, school, bin) %>%
+  summarise(epa = sum(EPA), 
+            cpoe = mean(cpoe), 
+            passes = n()) %>%
+  filter(!is.na(school)) %>%
+  group_by(qb, school) %>%
+  mutate(tot_passes = sum(passes)) %>%
+  filter(tot_passes >= 25) %>%
+  select(!tot_passes)
+
+write.table(df, "griddata.csv", sep = ",")
 
 
