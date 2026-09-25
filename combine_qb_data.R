@@ -27,8 +27,6 @@ library(geomtextpath)
 library(cfb4th)
 library(lme4)
 library(stringr)
-Sys.setenv(CFBD_API_KEY = "JPnkMqBIdRbAYVyM8y24N4hsY6IdXno2pwl2hCNZ98smfwFvGU5sRTrGFFDC7fQZ")
-setwd("~/Desktop")
 
 standardize_qb <- function(qb) {
   s <- qb
