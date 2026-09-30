@@ -2,13 +2,7 @@ name: Update QB Data
 
 on:
   schedule:
-    # 9 AM Eastern:
-    # 13:00 UTC during EDT
-    # 14:00 UTC during EST
     - cron: "0 13 * * 1,3"
-    - cron: "0 14 * * 1,3"
-
-  # Allows manual testing
   workflow_dispatch:
 
 permissions:
