@@ -7,13 +7,7 @@ library(dplyr)
 library(stringr)
 library(stringi)
 library(cfbfastR)
-
-# CFBD_API_KEY is supplied by GitHub Actions through:
-# env:
-#   CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
-#
-# No API key should be hard-coded in this file.
-
+Sys.setenv(CFBD_API_KEY = "JPnkMqBIdRbAYVyM8y24N4hsY6IdXno2pwl2hCNZ98smfwFvGU5sRTrGFFDC7fQZ")
 
 # ============================================================
 # QB NAME STANDARDIZATION
