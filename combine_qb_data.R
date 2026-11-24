@@ -990,6 +990,46 @@ write.table(
 )
 
 
+df <- pbp %>%
+  mutate(qb = ifelse(is.na(passer_player_name), rusher_player_name, passer_player_name),
+         exp = ifelse(EPA >= 0.8, 1, 0),
+         success = ifelse(EPA > 0, 1, 0),
+         past_sticks = ifelse(air_yards >= distance, 1, 0),
+         aggressiveness = air_yards-distance) %>%
+  filter(!is.na(qb), !is.na(EPA), pass == 1 | rush == 1) %>%
+  left_join(fbs, by = c("pos_team_id" = "team_id")) %>%
+  rename(offense_play = school) %>%
+  group_by(qb, offense_play) %>%
+  summarise(passes = sum(pass_attempt),
+            ed_epa = mean(EPA[down <= 2]),
+            ld_epa = mean(EPA[down >= 3]),
+            pass_epa = sum(EPA[pass == 1]),
+            rush_epa = sum(EPA[rush == 1]),
+            sr = mean(success),
+            er = mean(exp),
+            sack_rate = mean(sack[pass == 1]),
+            epa_to = sum(EPA[turnover_vec == TRUE & downs_turnover == FALSE]),
+            epa.= sum(EPA), 
+            epa_play = mean(EPA),
+            wpa = sum(wpa), 
+            wpa_play = mean(wpa), 
+            weighted_agg = weighted.mean(aggressiveness, w = xpass, na.rm = TRUE),
+            cpoe = mean(cpoe[pass_attempt == 1], na.rm = TRUE), 
+            adot = mean(air_yards[pass_attempt == 1], na.rm = TRUE),
+            yac_pct = sum(yards_after_catch, na.rm = TRUE)/sum(yds_receiving, na.rm = TRUE),
+            past_sticks_pct = mean(past_sticks, na.rm = TRUE),
+            ep_situation = mean(EP_start),
+            wp_situation = mean(wp_before, na.rm = TRUE),
+            naive_wp_situation = mean(wp_before_naive, na.rm = TRUE)) %>%
+  filter(passes >= 100, !is.na(offense_play))
+
+
+
+
+write.table(df, "buildcompdata.csv", sep = ",")
+
+
+
 # ============================================================
 # FINISHED
 # ============================================================
